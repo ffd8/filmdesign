@@ -236,7 +236,7 @@
 	}
 
 	var lazyLoadInstance = new LazyLoad({
-		callback_loaded: function(elm){
+		callback_loading: function(elm){
 			elm.classList.remove("lazy")
 		// 	console.log(elm)
 		}
@@ -489,13 +489,14 @@
 	}
 
 	function vidPlay(elm, poster, vid){
-		// let vidHolder = elm.parentNode
 		let vidHTML = `
-		<video playsinline webkit-playsinline controls autoplay poster="${poster}">
+		<video playsinline webkit-playsinline controls poster="${poster}">
 		  <source src="${vid}" type="video/mp4">
 		  Your browser does not support the video tag.
 		</video>`
-		elm.parentNode.innerHTML = vidHTML
+		let par = elm.parentNode
+		par.innerHTML = vidHTML
+		par.querySelector('video').play()
 	}
 
 </script>
