@@ -50,8 +50,9 @@
 		#results{
 			display: flex;
 			flex-flow: row wrap;
-			margin-top: 15px;
-			border-top: 2px solid #fff;
+			margin-top: 0px;
+			border-top: 1px solid #aaa;
+			color: #fff;
 		}
 		.vid{
 			position: relative;
@@ -85,7 +86,7 @@
 		  opacity: 0
 		}
 		.link{
-			float: right	;
+			float: right;
 			cursor: help;
 		}
 		svg{
@@ -98,8 +99,69 @@
 		svg:hover{
 			opacity: 1;
 		}
+		.fav svg:hover{
+			cursor: pointer;
+			fill: white;
+		}
 		#credits{
 			display: none;
+		}
+
+		#filter{
+			color: #fff;
+			padding: 5px 0 5px 15px;
+			border-top: 1px solid #aaa;
+			margin: 0;
+			display: flex;
+			flex-direction: row;
+		}
+
+		#filter div{
+			width: 20vw;
+		}
+		#filter a{
+			cursor: pointer;
+		}
+
+		#filter input{
+			background: none;
+			border: 0;
+			border-bottom: 2px solid #fff;
+			color: #fff;
+		}
+
+		#loading{
+			display: none;
+			position: fixed;
+			z-index: 99;
+			left: 0vw;
+			top: 0vw;
+			background: rgba(0, 0, 0, .5);
+			width: 100vw;
+			height: 100vh;
+			font-size: 100pt;
+			text-align: center;
+			padding-top: 25vh;
+			color: #fff;
+			animation:request 1s infinite
+		}
+		@keyframes request {
+			0%	 { color: rgba(255, 255, 255, 1) }
+			50%	 { color: rgba(255, 255, 255, .25) }
+			100% { color: rgba(255, 255, 255, 1) }
+		}
+		#loadmore{
+			border-radius: 0;
+			background: #333;
+			color: #fff;
+			border-top: 1px solid #fff;
+			width: 100vw;
+			height: 50px;
+			padding: 15px;
+			cursor: pointer;
+		}
+		#loadmore:hover{
+			background: #444;
 		}
 
 		@media only screen and (max-width: 800px) {
@@ -112,6 +174,7 @@
 
 </head>
 <body>
+<div id="loading">LOADING...</div>
 <div id="header">
 	<h1><a href="https://mediathek.hgk.fhnw.ch/amp/search/zotero2-2545256.3JZWF892" target="_blank">FILM + DESIGN</a></h1>
 	<div class="subtext">
@@ -125,20 +188,53 @@
 		<span onclick="showCredits(this);" style="cursor:help;">Impressum</span>
 	</div>
 </div>
+<div id="filter">
+	<div>
+		<a class="fav" onclick="favResults()" title="toggle filtering of favorites">
+		<svg id="filter-fav" class="" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></a>
+		View Favorites
+	</div>
+	<div id="filter-search">
+		<input id="filter-input" type="text" name="filter-input" placeholder="keywords">
+		<a onclick="filterResults()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-filter"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg></a>
+		<a id="filter-clear" style="display:none;" onclick="filterClear()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></a>
+	</div>
+	<div id="filter-status"></div>
+
+</div>
 <div id="results"></div>
+<div id="loadmore" onclick="loadMore()">Load More +</div>
 <!-- <div id="loadmore" onclick="loadMore()">Load More</div> -->
 <script type="text/javascript">
-	let results = [], offset = 0, count = 20
+	let results = [], resultsAll = [], resultsFilter = [],  offset = 0, count = 20, favs = [], filterFavs = false
+	let div = {
+		filter : {
+			search : document.getElementById('filter-search'),
+			status : document.getElementById('filter-status'),
+			clear : document.getElementById('filter-clear'),
+			input : document.getElementById('filter-input'),
+			fav : document.getElementById('filter-fav')
+		},
+		loading: document.getElementById('loading')
+	}
 
-	var lazyLoadInstance = new LazyLoad({});
+	var lazyLoadInstance = new LazyLoad({
+		callback_finish : function(){
+			// console.log('done')
+			// div.loading.style.display = 'none'
+			// if(lazyLoadInstance.loadingCount <= 1){
+			// 	div.loading.style.display = 'none'
+			// }
+		}
+	});
 
 	fetch('includes/data/film_design.json')
 	.then(res => res.json())
 	.then(jsonObj => {
 		shuffleArray(jsonObj.Result.items)
-		results = jsonObj.Result.items // shuffle...
+		resultsAll = jsonObj.Result.items // shuffle...
+		results = resultsAll.slice()
 		addResults()
-
 	})
 
 	window.onscroll = function(ev) {
@@ -156,42 +252,137 @@
 		addResults()
 	}
 
-	function addResults(){
-		// console.log(results[0])
-		for(let i = offset; i < offset+count; i++){
-			let r = results[i]
-			let v = {}
-			v.link = r.link
-			v.title = r.title
-			v.date = r.date
-			v.authors = r.authortext
-			v.mediaserver = 'https://ba14ns21403-sec1.fhnw.ch/mediasrv/'
-			v.path = r.poster.uri.replace('mediaserver:', '')
-			v.details = 'https://mediathek.hgk.fhnw.ch/amp/detail/' + r.Id
-			v.poster =  v.mediaserver + v.path + '/resize/size320x180/formatJPEG'
-			v.video = v.mediaserver + v.path.replace('timeshot$$3', 'web/master/')
-
-			let html = `
-			<div class="vid">
-				<video class="lazy" playsinline webkit-playsinline controls data-poster="${v.poster}" preload="none">
-				  <source src="${v.video}" type="video/mp4">
-				  Your browser does not support the video tag.
-				</video><br>
-
-				<a class="link" href="${v.details}" target="_blank"  title="Click for more details">
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-database"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-				</a>
-				<div class="info">
-					<i>${v.title}</i><br>
-					${v.authors}<br>
-					${v.date}<br>
-				</div>
-
-			</div>
-			`
-			document.getElementById('results').innerHTML += html
+	function favResults(){
+		document.getElementById('results').innerHTML = '';
+		filterFavs = !filterFavs
+		if(filterFavs){
+			for(let r of results){
+				if(favs.indexOf(r.Id) != -1){
+					parseResult(r)
+				}
+			}
+			div.filter.fav.style.fill = '#fff'
+			div.filter.search.style.visibility = 'hidden'
+		}else{
+			addResults()
+			div.filter.fav.style.fill = 'none'
+			div.filter.search.style.visibility = 'visible'
 		}
 		lazyLoadInstance.update();
+		favsInit()
+	}
+
+	function filterResults(){
+		let keyword = div.filter.input.value
+		if(keyword == ''){
+			filterClear()
+			return false
+		}
+		div.filter.fav.style.fill = 'none'
+		div.filter.clear.style = 'block'
+		document.getElementById('results').innerHTML = '';
+		offset = 0
+		count = 20
+		resultsFilter = []
+		for(let r of resultsAll){
+			let rf = [
+				r.Id.toLowerCase(),
+				// type: r.type.toLowerCase(),
+				r.title.toLowerCase(),
+				r.text.toLowerCase(),
+				r.date.toLowerCase(),
+				r.authors.join('').toLowerCase(),
+				// authorsText: r.authorsText.toLowerCase(),
+			]
+			let rflat = rf.join('')//JSON.stringify(rf)
+			if(rflat.includes(keyword.toLowerCase())){
+				// console.log(rflat)
+				resultsFilter.push(r)
+			}
+		}
+		if(resultsFilter.length > 0){
+			filterStatus(resultsFilter.length + ' results found.')
+			results = resultsFilter.slice()
+			addResults()
+			// lazyLoadInstance.update();
+		}else{
+			filterStatus('No results found.')
+			// document.getElementById('results').innerHTML = '<p> No results found.</p>'
+		}
+	}
+
+	function filterStatus(msg){
+		div.filter.status.innerHTML = msg
+	}
+
+	function filterClear(){
+		div.filter.input.value = ''
+		div.filter.clear.style.display = 'none'
+		resultsFilter = []
+		filterStatus('')
+		results = resultsAll.slice()
+		initResults()
+	}
+
+	function initResults(){
+		document.getElementById('results').innerHTML = ''
+		offset = 0
+		count = 20
+		addResults()
+	}
+
+	function addResults(){
+		// div.loading.style.display = 'block'
+		// console.log(results[0])
+		let lc = offset+count
+		if(lc > results.length){
+			lc = results.length
+		}
+		for(let i = offset; i < lc; i++){
+			let r = results[i]
+			parseResult(r)
+		}
+		lazyLoadInstance.update()
+		// div.loading.style.display = 'none'
+		favsInit()
+	}
+
+	function parseResult(r){
+		let v = {}
+		v.id = r.Id
+		v.link = r.link
+		v.title = r.title
+		v.date = r.date
+		v.authors = r.authortext
+		v.mediaserver = 'https://ba14ns21403-sec1.fhnw.ch/mediasrv/'
+		v.path = r.poster.uri.replace('mediaserver:', '')
+		v.details = 'https://mediathek.hgk.fhnw.ch/amp/detail/' + r.Id
+		v.poster =  v.mediaserver + v.path + '/resize/size320x180/formatJPEG'
+		v.video = v.mediaserver + v.path.replace('timeshot$$3', 'web/master/')
+
+		let html = `
+		<div id="${v.id}" class="vid">
+			<video class="lazy" playsinline webkit-playsinline controls data-poster="${v.poster}" preload="none">
+			  <source src="${v.video}" type="video/mp4">
+			  Your browser does not support the video tag.
+			</video><br>
+
+			<a class="fav link" onclick="favsToggle(\'${v.id}\')" title="click to save in favorites">
+			<svg id="fav-${v.id}" class="fav-svg" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+			</a>
+
+			<a class="link" href="${v.details}" target="_blank"  title="Click for more details">
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-database"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+			</a>
+			<div class="info">
+				<i>${v.title}</i><br>
+				${v.authors}<br>
+				${v.date}<br>
+			</div>
+
+		</div>
+		`
+		document.getElementById('results').innerHTML += html
 	}
 
 
@@ -205,8 +396,41 @@
 
 	function showCredits(elm){
 		elm.innerHTML = `
-		All copyrights below to their respective authors.<br>
+		All copyrights belong to their respective authors.<br>
 		CODE + DESIGN → <a href="https://teddavis.org" target="_blank">teddavis.org</a>`
+	}
+
+	function favsInit(){
+		 let tempFavs = localStorage.getItem('favs')
+		 if(tempFavs != undefined){
+		 	favs = JSON.parse(tempFavs)
+		 }
+
+		let favItems = document.querySelectorAll('.fav-svg').forEach(function(elm){
+			elm.style.fill = 'none'
+		})
+
+	 	for(let f of favs){
+		 	let favItem = document.getElementById('fav-'+f)
+		 	if(favItem != undefined){
+			 	document.getElementById('fav-'+f).style.fill = '#fff'
+		 	}
+		 }
+	}
+
+	function favsToggle(id){
+		if(favs.indexOf(id) == -1){
+			favs.push(id)
+		}else{
+			favs.splice(favs.indexOf(id), 1)
+		}
+		favsSync()
+	}
+
+	function favsSync(){
+		localStorage.setItem('favs', JSON.stringify(favs))
+		favsInit()
+		// console.log(localStorage.getItem('favs'))
 	}
 
 </script>
