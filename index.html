@@ -62,7 +62,7 @@
 			color: #aaa;
 			font-size: 10pt;
 		}
-		.vid video{
+		.vid video, .vid .vid-poster{
 			width: 100%;
 		}
 		.vid:hover{
@@ -236,13 +236,18 @@
 	}
 
 	var lazyLoadInstance = new LazyLoad({
-		callback_finish : function(){
-			// console.log('done')
-			// div.loading.style.display = 'none'
-			// if(lazyLoadInstance.loadingCount <= 1){
-			// 	div.loading.style.display = 'none'
-			// }
+		callback_loaded: function(elm){
+			elm.classList.remove("lazy")
+		// 	console.log(elm)
 		}
+		// callback_finish : function(){
+
+		// 	// console.log('done')
+		// 	// div.loading.style.display = 'none'
+		// 	// if(lazyLoadInstance.loadingCount <= 1){
+		// 	// 	div.loading.style.display = 'none'
+		// 	// }
+		// }
 	});
 
 	fetch('includes/data/film_design.json')
@@ -271,6 +276,8 @@
 
 	function favResults(){
 		document.getElementById('results').innerHTML = '';
+		results = resultsAll.slice()
+		// filterClear()
 		filterFavs = !filterFavs
 		if(filterFavs){
 			for(let r of results){
@@ -280,11 +287,19 @@
 			}
 			div.filter.fav.style.fill = '#fff'
 			div.filter.search.style.visibility = 'hidden'
+			div.filter.status.style.visibility = 'hidden'
 			div.loadmore.style.visibility = 'hidden'
 		}else{
-			addResults()
+			let keyword = div.filter.input.value
+			if(keyword == ''){
+				addResults()
+			}else{
+				filterResults()
+			}
+
 			div.filter.fav.style.fill = 'none'
 			div.filter.search.style.visibility = 'visible'
+			div.filter.status.style.visibility = 'visible'
 			div.loadmore.style.visibility = 'visible'
 		}
 		lazyLoadInstance.update();
@@ -321,7 +336,7 @@
 			]
 			let rflat = rf.join('')//JSON.stringify(rf)
 			if(rflat.includes(keyword.toLowerCase())){
-				// console.log(rflat)
+				// console.log(r)
 				resultsFilter.push(r)
 			}
 		}
@@ -384,13 +399,27 @@
 		v.details = 'https://mediathek.hgk.fhnw.ch/amp/detail/' + r.Id
 		v.poster =  v.mediaserver + v.path + '/resize/size320x180/formatJPEG'
 		v.video = v.mediaserver + v.path.replace('timeshot$$3', 'web/master/')
-
-		let html = `
-		<div id="${v.id}" class="vid">
-			<video class="lazy" playsinline webkit-playsinline controls data-poster="${v.poster}" preload="none">
+		v.vidPlay = `vidPlay(this, \'${v.poster}\',\'${v.video}\')`
+		v.cursor = `cursor:pointer;`
+		if(!r.media.hasOwnProperty('video')){
+			v.vidPlay = ``
+			v.cursor = ``
+		}
+		/*
+			div class="lazy vid-poster" style="width:100%;height:auto;background-image:url(${v.poster});background-size:cover;"></div>
+			<video playsinline webkit-playsinline controls data-poster="${v.poster}" preload="none">
 			  <source src="${v.video}" type="video/mp4">
 			  Your browser does not support the video tag.
 			</video><br>
+
+		 */
+
+		let html = `
+		<div id="${v.id}" class="vid">
+
+			<div class="vid-holder" style="width:100%;background:#000;">
+			<img class="lazy" src="${v.poster}" style="width:100%;${v.cursor}" onclick="${v.vidPlay}" title="Click to play">
+			</div>
 
 			<a class="fav link" onclick="favsToggle(\'${v.id}\')" title="click to save in favorites">
 			<svg id="fav-${v.id}" class="fav-svg" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
@@ -456,6 +485,16 @@
 		localStorage.setItem('favs', JSON.stringify(favs))
 		favsInit()
 		// console.log(localStorage.getItem('favs'))
+	}
+
+	function vidPlay(elm, poster, vid){
+		// let vidHolder = elm.parentNode
+		let vidHTML = `
+		<video playsinline webkit-playsinline controls autoplay poster="${poster}">
+		  <source src="${vid}" type="video/mp4">
+		  Your browser does not support the video tag.
+		</video>`
+		elm.parentNode.innerHTML = vidHTML
 	}
 
 </script>
