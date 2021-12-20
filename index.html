@@ -215,7 +215,8 @@
 			input : document.getElementById('filter-input'),
 			fav : document.getElementById('filter-fav')
 		},
-		loading: document.getElementById('loading')
+		loading: document.getElementById('loading'),
+		loadmore: document.getElementById('loadmore')
 	}
 
 	var lazyLoadInstance = new LazyLoad({
@@ -263,10 +264,12 @@
 			}
 			div.filter.fav.style.fill = '#fff'
 			div.filter.search.style.visibility = 'hidden'
+			div.loadmore.style.visibility = 'hidden'
 		}else{
 			addResults()
 			div.filter.fav.style.fill = 'none'
 			div.filter.search.style.visibility = 'visible'
+			div.loadmore.style.visibility = 'visible'
 		}
 		lazyLoadInstance.update();
 		favsInit()
